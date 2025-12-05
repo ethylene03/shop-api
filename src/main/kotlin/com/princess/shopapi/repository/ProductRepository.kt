@@ -1,7 +1,6 @@
 package com.princess.shopapi.repository
 
-import com.princess.shopapi.dto.Role
-import com.princess.shopapi.model.UserEntity
+import com.princess.shopapi.model.ProductEntity
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
@@ -10,7 +9,6 @@ import org.springframework.stereotype.Repository
 import java.util.*
 
 @Repository
-interface UserRepository : JpaRepository<UserEntity, UUID>, JpaSpecificationExecutor<UserEntity> {
-    fun findByUsername(username: String): UserEntity?
-    fun findAllByRole(role: Role, pageable: Pageable): Page<UserEntity>
+interface ProductRepository : JpaRepository<ProductEntity, UUID>, JpaSpecificationExecutor<ProductEntity> {
+    fun findAllByCreatedBy(userId: UUID, pageable: Pageable): Page<ProductEntity>
 }
