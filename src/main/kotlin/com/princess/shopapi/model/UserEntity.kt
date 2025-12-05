@@ -27,6 +27,12 @@ class UserEntity(
     @Enumerated(EnumType.STRING)
     var role: Role = Role.BUYER,
 
+    @OneToOne(mappedBy = "user", cascade = [CascadeType.ALL])
+    var cart: CartEntity? = null,
+
+    @OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true)
+    var orders: MutableList<OrderEntity> = mutableListOf(),
+
     @CreatedDate
     var createdDate: LocalDateTime? = null
 )
