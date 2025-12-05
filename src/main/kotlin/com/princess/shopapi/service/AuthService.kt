@@ -5,6 +5,8 @@ import com.princess.shopapi.dto.UserTokenDTO
 import com.princess.shopapi.helpers.InvalidLoginException
 import com.princess.shopapi.helpers.JWTUtil
 import com.princess.shopapi.helpers.PasswordManager
+import com.princess.shopapi.helpers.toCartResponse
+import com.princess.shopapi.helpers.toOrderResponse
 import com.princess.shopapi.repository.UserRepository
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletResponse
@@ -35,7 +37,13 @@ class AuthService(
             }
 
             UserTokenDTO(
-                id = user.id, name = user.name, username = user.username, role = user.role, token = jwtUtil.generateAccessToken(user.id!!, user.role)
+                id = user.id,
+                name = user.name,
+                username = user.username,
+                role = user.role,
+                token = jwtUtil.generateAccessToken(user.id!!, user.role),
+                cart = user.cart?.toCartResponse(),
+                orders = user.orders.map { it.toOrderResponse() }.toMutableList()
             )
         } ?: run {
             log.error("Password mismatch.")
@@ -61,7 +69,9 @@ class AuthService(
             name = user.name,
             username = user.username,
             role = user.role,
-            token = jwtUtil.generateAccessToken(user.id!!, user.role)
+            token = jwtUtil.generateAccessToken(user.id!!, user.role),
+            cart = user.cart?.toCartResponse(),
+            orders = user.orders.map { it.toOrderResponse() }.toMutableList()
         )
     }
 
