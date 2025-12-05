@@ -4,6 +4,7 @@ import java.util.UUID
 
 data class UserDTO(
     val id: UUID? = null,
+    val role: Role,
     val name: String,
     val username: String,
     val password: String? = null,
@@ -18,5 +19,11 @@ data class UserTokenDTO(
     val id: UUID? = null,
     val name: String = "",
     val username: String = "",
+    val role: Role = Role.BUYER,
     val token: String = ""
 )
+
+enum class Role {
+    BUYER,
+    SELLER
+}

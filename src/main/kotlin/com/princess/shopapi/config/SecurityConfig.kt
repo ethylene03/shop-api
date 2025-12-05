@@ -1,5 +1,6 @@
 package com.princess.shopapi.config
 
+import com.princess.shopapi.dto.Role
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -25,8 +26,14 @@ class SecurityConfig(private val jwt: JWTConfig) {
                     "/auth/**",
                     "/"
                 ).permitAll()
-
                 auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                auth.requestMatchers(HttpMethod.POST, "/products").hasRole("SELLER")
+                auth.requestMatchers(HttpMethod.PUT, "/products/**").hasRole("SELLER")
+                auth.requestMatchers(HttpMethod.DELETE, "/products/**").hasRole("SELLER")
+                auth.requestMatchers(HttpMethod.PUT, "/orders/*/status").hasRole("SELLER")
+
+                auth.requestMatchers("/carts/*/items/**").hasRole("BUYER")
 
                 auth.anyRequest().fullyAuthenticated()
             }

@@ -6,7 +6,8 @@ import com.princess.shopapi.model.UserEntity
 fun UserEntity.toUserResponse(): UserDTO = UserDTO(
     id = this.id ?: throw IllegalArgumentException("User ID is required."),
     name = this.name,
-    username = this.username
+    username = this.username,
+    role = this.role
 )
 
 fun UserDTO.createUserEntity(): UserEntity = UserEntity(

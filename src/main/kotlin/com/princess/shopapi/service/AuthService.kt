@@ -10,7 +10,7 @@ import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.util.UUID
+import java.util.*
 
 @Service
 class AuthService(
@@ -26,7 +26,7 @@ class AuthService(
         log.debug("Checking if password matches..")
         return request.password.takeIf { passwordManager.isMatch(it, user.password) }?.let {
             // generate refresh token
-            val refreshToken = jwtUtil.generateRefreshToken(user.id!!)
+            val refreshToken = jwtUtil.generateRefreshToken(user.id!!, user.role)
             Cookie("refresh_token", refreshToken).apply {
                 isHttpOnly = true
                 path = "/"
@@ -35,7 +35,7 @@ class AuthService(
             }
 
             UserTokenDTO(
-                id = user.id, name = user.name, username = user.username, token = jwtUtil.generateAccessToken(user.id!!)
+                id = user.id, name = user.name, username = user.username, role = user.role, token = jwtUtil.generateAccessToken(user.id!!, user.role)
             )
         } ?: run {
             log.error("Password mismatch.")
@@ -60,7 +60,8 @@ class AuthService(
             id = user.id,
             name = user.name,
             username = user.username,
-            token = jwtUtil.generateAccessToken(user.id!!)
+            role = user.role,
+            token = jwtUtil.generateAccessToken(user.id!!, user.role)
         )
     }
 

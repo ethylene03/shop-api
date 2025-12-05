@@ -2,6 +2,7 @@ package com.princess.shopapi.service
 
 import com.princess.shopapi.dto.UserDTO
 import com.princess.shopapi.helpers.*
+import com.princess.shopapi.dto.Role
 import com.princess.shopapi.repository.UserRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -26,8 +27,8 @@ class UserService(private val repository: UserRepository, private val passwordMa
             .toUserResponse()
     }
 
-    fun findAll(): List<UserDTO> {
-        return repository.findAll().map { it.toUserResponse() }
+    fun findAll(role: Role): List<UserDTO> {
+        return repository.findAllByRole(role).map { it.toUserResponse() }
     }
 
     fun find(id: UUID): UserDTO {

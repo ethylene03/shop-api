@@ -5,6 +5,7 @@ import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource
 import org.springframework.stereotype.Component
@@ -24,14 +25,20 @@ class JWTConfig(private val utils: JWTUtil) : OncePerRequestFilter() {
 
                 val token = auth.substring(7)
 
-                utils.extractToken(token)?.subject
-                    ?.let { id ->
-                        UsernamePasswordAuthenticationToken(UUID.fromString(id), null, emptyList())
-                            .apply {
-                                details = WebAuthenticationDetailsSource().buildDetails(request)
-                                SecurityContextHolder.getContext().authentication = this
-                            }
-                    }
+                utils.extractToken(token)?.let { claims ->
+                    val id = claims.subject
+                    val role = claims["role"].toString()
+
+                    UsernamePasswordAuthenticationToken(
+                        UUID.fromString(id),
+                        null,
+                        listOf(SimpleGrantedAuthority("ROLE_${role}"))
+                    )
+                        .apply {
+                            details = WebAuthenticationDetailsSource().buildDetails(request)
+                            SecurityContextHolder.getContext().authentication = this
+                        }
+                }
             }
 
         filterChain.doFilter(request, response)

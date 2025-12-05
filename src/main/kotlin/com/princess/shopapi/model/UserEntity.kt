@@ -1,5 +1,6 @@
 package com.princess.shopapi.model
 
+import com.princess.shopapi.dto.Role
 import jakarta.persistence.*
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.jpa.domain.support.AuditingEntityListener
@@ -22,6 +23,9 @@ class UserEntity(
 
     @Column(nullable = false)
     var password: String = "",
+
+    @Enumerated(EnumType.STRING)
+    var role: Role = Role.BUYER,
 
     @CreatedDate
     var createdDate: LocalDateTime? = null

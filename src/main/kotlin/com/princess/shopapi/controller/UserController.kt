@@ -1,5 +1,6 @@
 package com.princess.shopapi.controller
 
+import com.princess.shopapi.dto.Role
 import com.princess.shopapi.dto.UserDTO
 import com.princess.shopapi.service.UserService
 import jakarta.validation.Valid
@@ -23,11 +24,11 @@ class UserController(private val service: UserService) {
         return service.create(details).also { log.info("User created.") }
     }
 
-    @GetMapping
-    fun findAll(): List<UserDTO> {
-        log.info("Running GET /users method.")
+    @GetMapping("/{role}")
+    fun findAll(@PathVariable role: Role): List<UserDTO> {
+        log.info("Running GET /users/{role} method.")
 
-        return service.findAll().also { log.info("Users fetched.") }
+        return service.findAll(role).also { log.info("Users fetched.") }
     }
 
     @GetMapping("/{id}")
