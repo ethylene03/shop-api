@@ -5,6 +5,8 @@ import com.princess.shopapi.dto.UserDTO
 import com.princess.shopapi.service.UserService
 import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.http.HttpStatus
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.*
@@ -25,10 +27,10 @@ class UserController(private val service: UserService) {
     }
 
     @GetMapping("/{role}")
-    fun findAll(@PathVariable role: Role): List<UserDTO> {
+    fun findAll(@PathVariable role: Role, pageable: Pageable): Page<UserDTO> {
         log.info("Running GET /users/{role} method.")
 
-        return service.findAll(role).also { log.info("Users fetched.") }
+        return service.findAll(role, pageable).also { log.info("Users fetched.") }
     }
 
     @GetMapping("/{id}")

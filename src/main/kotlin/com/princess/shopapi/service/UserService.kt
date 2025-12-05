@@ -1,10 +1,14 @@
 package com.princess.shopapi.service
 
+import com.princess.shopapi.dto.Role
 import com.princess.shopapi.dto.UserDTO
 import com.princess.shopapi.helpers.*
-import com.princess.shopapi.dto.Role
+import com.princess.shopapi.model.CartEntity
 import com.princess.shopapi.repository.UserRepository
 import org.slf4j.LoggerFactory
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageImpl
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import java.util.*
 
@@ -12,30 +16,42 @@ import java.util.*
 class UserService(private val repository: UserRepository, private val passwordManager: PasswordManager) {
     private val log = LoggerFactory.getLogger(this::class.java)
 
-    fun create(user: UserDTO): UserDTO {
+    fun create(details: UserDTO): UserDTO {
         log.debug("Checking if username is unique..")
-        repository.findByUsername(user.username)
+        repository.findByUsername(details.username)
             ?.let {
                 log.error("Username already exists.")
                 throw DuplicateKeyException("Username already exists.")
             }
 
-        log.debug("Saving user..")
-        return user.copy(password = passwordManager.hash(user.password))
+        log.debug("Creating user..")
+        val user = details.copy(password = passwordManager.hash(details.password))
             .createUserEntity()
-            .let { repository.save(it) }
-            .toUserResponse()
+
+        log.debug("Creating cart..")
+        user.apply {
+            cart = CartEntity(user = this, totalAmount = 0.0, items = mutableListOf())
+        }
+
+        return repository.save(user).toUserResponse()
     }
 
-    fun findAll(role: Role): List<UserDTO> {
-        return repository.findAllByRole(role).map { it.toUserResponse() }
+    fun findAll(role: Role, pageable: Pageable): Page<UserDTO> {
+        val page = repository.findAllByRole(role, pageable)
+
+        val list = page.content.map { it.toUserResponse() }
+        return PageImpl(
+            list,
+            page.pageable,
+            page.totalElements
+        )
     }
 
     fun find(id: UUID): UserDTO {
         return repository.findById(id)
             .orElseThrow {
-                log.error("Data with id $id not found.")
-                throw ResourceNotFoundException("ID does not exist.")
+                log.error("User Id not found.")
+                throw ResourceNotFoundException("User does not exist.")
             }.toUserResponse()
     }
 
