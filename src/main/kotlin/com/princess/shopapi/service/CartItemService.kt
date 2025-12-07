@@ -1,6 +1,5 @@
 package com.princess.shopapi.service
 
-import com.princess.shopapi.dto.CartDTO
 import com.princess.shopapi.dto.CartItemDTO
 import com.princess.shopapi.helpers.ResourceNotFoundException
 import com.princess.shopapi.helpers.createCartItemEntity
@@ -10,7 +9,7 @@ import com.princess.shopapi.repository.CartRepository
 import com.princess.shopapi.repository.ProductRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.util.UUID
+import java.util.*
 
 @Service
 class CartItemService(private val repository: CartItemRepository, private val productRepository: ProductRepository, private val cartRepository: CartRepository) {
@@ -34,9 +33,15 @@ class CartItemService(private val repository: CartItemRepository, private val pr
         log.debug("Fetching cart..")
         val cart = cartRepository.findById(details.cartId).orElseThrow()
 
-        log.debug("Saving cart-item..")
-        return details.createCartItemEntity(product, cart)
-            .let { repository.save(it) }
+        log.debug("Creating cart-item..")
+        val cartItem = details.createCartItemEntity(product, cart)
+
+        log.debug("Updating cart..")
+        return cart.apply {
+            items.add(cartItem)
+            totalAmount = items.sumOf { (it.product?.price ?: 0.0) * it.quantity }
+        }.let { cartRepository.save(it) }
+            .items.first { it.product?.id == cartItem.product?.id }
             .toCartItemResponse()
     }
 
@@ -48,21 +53,35 @@ class CartItemService(private val repository: CartItemRepository, private val pr
                 ResourceNotFoundException("CartItem does not exist.")
             }
 
-        log.debug("Saving cart-item..")
-        return cartItem.apply { quantity = details.quantity }
-            .let { repository.save(it) }
+        log.debug("Checking if cart exists..")
+        val cart = cartItem.cart ?: throw ResourceNotFoundException("Cart does not exist.")
+
+        log.debug("Updating cart-item..")
+        val item = cart.items.find { it.id == itemId }
+            ?: throw ResourceNotFoundException("CartItem does not exist.")
+        item.quantity = details.quantity
+
+        return cart.apply {
+            log.debug("Updating total amount..")
+            totalAmount = items.sumOf { (it.product?.price ?: 0.0) * it.quantity }
+        }.let {
+            log.debug("Saving cart..")
+            cartRepository.save(it)
+        }.items.first { it.product?.id == cartItem.product?.id }
             .toCartItemResponse()
     }
 
     fun delete(itemId: UUID) {
         log.debug("Checking if cart-item exists..")
-        repository.findById(itemId)
+        val cart = repository.findById(itemId)
             .orElseThrow {
                 log.error("CartItem does not exist.")
                 ResourceNotFoundException("CartItem does not exist.")
-            }
+            }.cart ?: throw ResourceNotFoundException("Cart does not exist.")
 
         log.debug("Deleting cart-item..")
-        repository.deleteById(itemId)
+        cart.apply {
+            items.removeIf { it.id == itemId }
+        }.let { cartRepository.save(it) }
     }
 }
