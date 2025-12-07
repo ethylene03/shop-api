@@ -1,24 +1,14 @@
 package com.princess.shopapi.helpers
 
-import com.princess.shopapi.dto.CartDTO
-import com.princess.shopapi.dto.CartItemDTO
-import com.princess.shopapi.dto.OrderDTO
-import com.princess.shopapi.dto.OrderItemDTO
-import com.princess.shopapi.dto.ProductDTO
-import com.princess.shopapi.dto.UserDTO
-import com.princess.shopapi.model.CartEntity
-import com.princess.shopapi.model.CartItemEntity
-import com.princess.shopapi.model.OrderEntity
-import com.princess.shopapi.model.OrderItemEntity
-import com.princess.shopapi.model.ProductEntity
-import com.princess.shopapi.model.UserEntity
+import com.princess.shopapi.dto.*
+import com.princess.shopapi.model.*
 
 fun UserEntity.toUserResponse(): UserDTO = UserDTO(
     id = this.id ?: throw IllegalArgumentException("User ID is required."),
     name = this.name,
     username = this.username,
     role = this.role,
-    cart = this.cart?.toCartResponse(),
+    cart = this.cart?.toCartResponse() ?: throw IllegalArgumentException("Cart is required."),
     orders = this.orders.map { it.toOrderResponse() }.toMutableList()
 )
 
@@ -49,7 +39,7 @@ fun CartEntity.toCartResponse(): CartDTO = CartDTO(
     id = this.id,
     userId = this.user?.id ?: throw IllegalArgumentException("User ID is required."),
     totalAmount = this.totalAmount,
-    products = this.items.map { it.toCartItemResponse() }.toMutableList()
+    products = this.items.sortedBy { it.createdAt }.map { it.toCartItemResponse() }.toMutableList()
 )
 
 fun CartDTO.createCartEntity(user: UserEntity): CartEntity = CartEntity(

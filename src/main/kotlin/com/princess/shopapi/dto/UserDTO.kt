@@ -1,19 +1,26 @@
 package com.princess.shopapi.dto
 
-import java.util.UUID
+import jakarta.validation.constraints.NotBlank
+import java.util.*
 
 data class UserDTO(
     val id: UUID? = null,
+    @field:NotBlank(message = "Role is required.")
     val role: Role,
+    @field:NotBlank(message = "Name is required.")
     val name: String,
+    @field:NotBlank(message = "Username is required.")
     val username: String,
     val password: String? = null,
-    val cart: CartDTO? = null,
+    @field:NotBlank(message = "Cart is required.")
+    val cart: CartDTO,
     val orders: MutableList<OrderDTO> = mutableListOf()
 )
 
 data class CredentialsDTO(
+    @field:NotBlank(message = "Username is required.")
     val username: String,
+    @field:NotBlank(message = "Password is required.")
     val password: String
 )
 
