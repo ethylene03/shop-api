@@ -41,6 +41,7 @@ class ProductService(private val repository: ProductRepository) {
 
             Role.SELLER -> Specification<ProductEntity> { root, _, cb ->
                 cb.equal(root.get<UUID>("createdBy"), userId)
+                cb.equal(root.get<Boolean>("isDeleted"), false)
             }.and(querySpec)
         }
 
