@@ -35,6 +35,9 @@ class ProductEntity(
     @Column(nullable = false)
     var quantity: Int = 1,
 
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    var isDeleted: Boolean = false,
+
     // Audit Columns
     @CreatedBy
     var createdBy: UUID? = null,

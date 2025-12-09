@@ -9,7 +9,6 @@ fun UserEntity.toUserResponse(): UserDTO = UserDTO(
     username = this.username,
     role = this.role,
     cart = this.cart?.toCartResponse() ?: throw IllegalArgumentException("Cart is required."),
-    orders = this.orders.map { it.toOrderResponse() }.toMutableList()
 )
 
 fun UserDTO.createUserEntity(cart: CartEntity? = null): UserEntity = UserEntity(
@@ -25,7 +24,9 @@ fun ProductEntity.toProductResponse(): ProductDTO = ProductDTO(
     name = this.name,
     price = this.price,
     description = this.description,
-    quantity = this.quantity
+    quantity = this.quantity,
+    seller = this.createdBy,
+    isDeleted = this.isDeleted
 )
 
 fun ProductDTO.createProductEntity(): ProductEntity = ProductEntity(

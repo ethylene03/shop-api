@@ -3,13 +3,14 @@ package com.princess.shopapi.service
 import com.princess.shopapi.dto.ProductDTO
 import com.princess.shopapi.dto.Role
 import com.princess.shopapi.helpers.ResourceNotFoundException
+import com.princess.shopapi.helpers.buildSpecification
 import com.princess.shopapi.helpers.createProductEntity
 import com.princess.shopapi.helpers.toProductResponse
+import com.princess.shopapi.model.ProductEntity
 import com.princess.shopapi.repository.ProductRepository
 import org.slf4j.LoggerFactory
-import org.springframework.data.domain.Page
-import org.springframework.data.domain.PageImpl
-import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.*
+import org.springframework.data.jpa.domain.Specification
 import org.springframework.stereotype.Service
 import java.util.*
 
@@ -31,6 +32,10 @@ class ProductService(private val repository: ProductRepository) {
             Role.SELLER -> repository.findAllByCreatedBy(userId, pageable)
         }
 
+        log.debug("Finding products..")
+        val page = repository.findAll(spec, customPageable)
+
+        log.debug("Returning list..")
         val list = page.content.map { it.toProductResponse() }
         return PageImpl(
             list,
@@ -41,20 +46,18 @@ class ProductService(private val repository: ProductRepository) {
 
     fun find(id: UUID): ProductDTO {
         log.debug("Finding product..")
-        return repository.findById(id)
-            .orElseThrow {
-                log.error("Data with id $id not found.")
-                throw ResourceNotFoundException("ID does not exist.")
-            }.toProductResponse()
+        return repository.findByIdAndIsDeletedFalse(id).orElseThrow {
+            log.error("Data with id $id not found.")
+            throw ResourceNotFoundException("ID does not exist.")
+        }.toProductResponse()
     }
 
     fun update(id: UUID, details: ProductDTO): ProductDTO {
         log.debug("Finding product by given ID..")
-        val currentProduct = repository.findById(id)
-            .orElseThrow {
-                log.error("Product not found.")
-                ResourceNotFoundException("Product not found.")
-            }
+        val currentProduct = repository.findByIdAndIsDeletedFalse(id).orElseThrow {
+            log.error("Product not found.")
+            ResourceNotFoundException("Product not found.")
+        }
 
         log.debug("Updating product..")
         return currentProduct.apply {
@@ -67,11 +70,10 @@ class ProductService(private val repository: ProductRepository) {
 
     fun addQuantity(id: UUID, quantity: Int): ProductDTO {
         log.debug("Finding product by given ID..")
-        val currentProduct = repository.findById(id)
-            .orElseThrow {
-                log.error("Product not found.")
-                ResourceNotFoundException("Product not found.")
-            }
+        val currentProduct = repository.findByIdAndIsDeletedFalse(id).orElseThrow {
+            log.error("Product not found.")
+            ResourceNotFoundException("Product not found.")
+        }
 
         log.debug("Adding quantity..")
         return currentProduct.apply {
@@ -81,9 +83,9 @@ class ProductService(private val repository: ProductRepository) {
 
     fun delete(id: UUID) {
         log.debug("Checking if ID exists..")
-        find(id)
+        val product = repository.findByIdAndIsDeletedFalse(id).orElseThrow()
 
         log.debug("Deleting data..")
-        repository.deleteById(id)
+        product.apply { isDeleted = true }.let { repository.save(it) }
     }
 }
