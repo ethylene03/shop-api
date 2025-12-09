@@ -30,11 +30,19 @@ class CartItemService(private val repository: CartItemRepository, private val pr
                 throw IllegalArgumentException("Product ID is required.")
             }
 
+        log.debug("Checking if product is deleted..")
+        if(product.isDeleted) {
+            log.error("Cannot add product to cart if product is deleted.")
+            throw IllegalArgumentException("Deleted products cannot be added to cart.")
+        }
+
         log.debug("Fetching cart..")
         val cart = cartRepository.findById(details.cartId).orElseThrow()
 
         log.debug("Creating cart-item..")
         val cartItem = details.createCartItemEntity(product, cart)
+        if((cartItem.product?.quantity ?: 0) < cartItem.quantity)
+            throw IllegalArgumentException("Quantity must not exceed remaining stock.")
 
         log.debug("Updating cart..")
         return cart.apply {
@@ -59,6 +67,10 @@ class CartItemService(private val repository: CartItemRepository, private val pr
         log.debug("Updating cart-item..")
         val item = cart.items.find { it.id == itemId }
             ?: throw ResourceNotFoundException("CartItem does not exist.")
+
+        if(details.quantity > (item.product?.quantity ?: 100))
+            throw IllegalArgumentException("Error updating cart, product quantity might exceed the remaining stock.")
+
         item.quantity = details.quantity
 
         return cart.apply {
@@ -81,6 +93,10 @@ class CartItemService(private val repository: CartItemRepository, private val pr
 
         log.debug("Deleting cart-item..")
         cart.apply {
+            val item = items.find { it.id == itemId }
+            if(item != null)
+                totalAmount -= (item.product?.price ?: 0.0) * item.quantity
+
             items.removeIf { it.id == itemId }
         }.let { cartRepository.save(it) }
     }
