@@ -20,16 +20,28 @@ class ProductService(private val repository: ProductRepository) {
 
     fun create(product: ProductDTO): ProductDTO {
         log.debug("Saving product..")
-        return product.createProductEntity()
-            .let { repository.save(it) }
-            .toProductResponse()
+        return product.createProductEntity().let { repository.save(it) }.toProductResponse()
     }
 
-    fun findAll(role: Role, userId: UUID, pageable: Pageable): Page<ProductDTO> {
-        log.debug("Finding all products..")
-        val page = when (role) {
-            Role.BUYER -> repository.findAll(pageable)
-            Role.SELLER -> repository.findAllByCreatedBy(userId, pageable)
+    fun findAll(role: Role, userId: UUID, pageable: Pageable, query: String?): Page<ProductDTO> {
+        val customPageable = if (pageable.sort.isUnsorted) PageRequest.of(
+            pageable.pageNumber, pageable.pageSize, Sort.by(Sort.Direction.DESC, "quantity")
+        ) else pageable
+
+        log.debug("Query: ${query}")
+
+        log.debug("Creating specifications..")
+        val querySpec = if (query != null) buildSpecification<ProductEntity>(query)
+        else null
+
+        val spec = when (role) {
+            Role.BUYER -> Specification<ProductEntity> { root, _, cb ->
+                cb.equal(root.get<Boolean>("isDeleted"), false)
+            }.and(querySpec)
+
+            Role.SELLER -> Specification<ProductEntity> { root, _, cb ->
+                cb.equal(root.get<UUID>("createdBy"), userId)
+            }.and(querySpec)
         }
 
         log.debug("Finding products..")
@@ -38,9 +50,7 @@ class ProductService(private val repository: ProductRepository) {
         log.debug("Returning list..")
         val list = page.content.map { it.toProductResponse() }
         return PageImpl(
-            list,
-            page.pageable,
-            page.totalElements
+            list, page.pageable, page.totalElements
         )
     }
 

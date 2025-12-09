@@ -29,10 +29,15 @@ class ProductController(private val service: ProductService) {
     }
 
     @GetMapping
-    fun findAll(@RequestParam role: Role, @AuthenticationPrincipal userId: UUID, pageable: Pageable): Page<ProductDTO> {
-        log.info("Running GET /products/{role} method.")
+    fun findAll(
+        @RequestParam role: Role,
+        @AuthenticationPrincipal userId: UUID,
+        pageable: Pageable,
+        @RequestParam(required = false) query: String?
+    ): Page<ProductDTO> {
+        log.info("Running GET /products method.")
 
-        return service.findAll(role, userId, pageable).also { log.info("Products fetched.") }
+        return service.findAll(role, userId, pageable, query).also { log.info("Products fetched.") }
     }
 
     @GetMapping("/{id}")
