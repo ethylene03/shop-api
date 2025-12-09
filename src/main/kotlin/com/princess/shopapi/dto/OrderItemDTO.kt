@@ -7,7 +7,7 @@ import java.util.*
 data class OrderItemDTO(
     val id: UUID? = null,
     @field:NotNull(message = "Order ID should not be empty.")
-    val orderId: UUID,
+    val orderId: UUID? = null,
     @field:NotNull(message = "Product details should not be empty.")
     val product: ProductDTO,
     @field:Range(min = 0, message = "Quantity should be positive.")
