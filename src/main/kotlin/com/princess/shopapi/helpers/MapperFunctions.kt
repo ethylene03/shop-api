@@ -64,14 +64,17 @@ fun CartItemDTO.createCartItemEntity(product: ProductEntity, cart: CartEntity): 
 
 fun OrderEntity.toOrderResponse(): OrderDTO = OrderDTO(
     id = this.id,
-    userId = this.user?.id ?: throw IllegalArgumentException("User ID is required."),
+    buyerId = this.buyer?.id ?: throw IllegalArgumentException("User ID is required."),
+    sellerId = this.seller?.id ?: throw IllegalArgumentException("User ID is required."),
     status = this.status,
     totalAmount = this.totalAmount,
-    products = this.items.map { it.toOrderItemResponse() }.toMutableList()
+    products = this.items.map { it.toOrderItemResponse() }.toMutableList(),
+    orderDate = this.createdAt
 )
 
-fun OrderDTO.createOrderEntity(user: UserEntity): OrderEntity = OrderEntity(
-    user = user,
+fun OrderDTO.createOrderEntity(buyer: UserEntity, seller: UserEntity): OrderEntity = OrderEntity(
+    buyer = buyer,
+    seller = seller,
     status = this.status,
     totalAmount = this.totalAmount,
     items = mutableListOf()

@@ -11,5 +11,6 @@ import java.util.UUID
 
 @Repository
 interface OrderRepository : JpaRepository<OrderEntity, UUID>, JpaSpecificationExecutor<ProductEntity> {
-    fun findAllByUserId(userId: UUID, pageable: Pageable): Page<OrderEntity>
+    fun findAllByBuyerId(userId: UUID, pageable: Pageable): Page<OrderEntity>
+    fun findAllBySellerId(userId: UUID, pageable: Pageable): Page<OrderEntity>
 }

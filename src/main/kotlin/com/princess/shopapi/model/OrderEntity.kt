@@ -32,8 +32,12 @@ class OrderEntity(
     var id: UUID? = null,
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    var user: UserEntity? = null,
+    @JoinColumn(name = "buyer_id")
+    var buyer: UserEntity? = null,
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "seller_id")
+    var seller: UserEntity? = null,
 
     @Enumerated(EnumType.STRING)
     var status: OrderStatus = OrderStatus.PREPARING,

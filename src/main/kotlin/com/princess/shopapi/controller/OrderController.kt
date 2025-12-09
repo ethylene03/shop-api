@@ -25,16 +25,16 @@ class OrderController(private val service: OrderService) {
 
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping
-    fun create(@Valid @RequestBody details: OrderDTO, @AuthenticationPrincipal userId: UUID): OrderDTO {
+    fun create(@Valid @RequestBody details: OrderDTO, @AuthenticationPrincipal userId: UUID): List<OrderDTO> {
         log.info("Running POST /orders method.")
         return service.create(userId, details).also { log.info("Order created.") }
     }
 
     @GetMapping
-    fun findAll(@AuthenticationPrincipal userId: UUID, pageable: Pageable): Page<OrderDTO> {
+    fun findAll(@AuthenticationPrincipal userId: UUID, @RequestParam role: Role, pageable: Pageable): Page<OrderDTO> {
         log.info("Running GET /orders method.")
 
-        return service.findAll(userId, pageable).also { log.info("Orders fetched.") }
+        return service.findAll(userId, role, pageable).also { log.info("Orders fetched.") }
     }
 
     @GetMapping("/{id}")
@@ -44,14 +44,14 @@ class OrderController(private val service: OrderService) {
     }
 
     @PutMapping("/{id}/status")
-    fun updateStatus(@PathVariable("id") id: UUID, @Valid @RequestBody status: OrderStatusDTO): OrderDTO {
+    fun updateStatus(@PathVariable("id") id: UUID, @Valid @RequestBody status: OrderStatusDTO, @AuthenticationPrincipal userId: UUID): OrderDTO {
         log.info("Running PUT /orders/{id} method.")
-        return service.updateStatus(id, status.status).also { log.info("Order updated.") }
+        return service.updateStatus(id, status.status, userId).also { log.info("Order updated.") }
     }
 
     @PutMapping("/{id}/cancel")
     fun cancelOrder(@PathVariable("id") id: UUID): OrderDTO {
-        log.info("Running PUT /orders/{id}/quantity method.")
+        log.info("Running PUT /orders/{id}/cancel method.")
         return service.cancelOrder(id)
             .also { log.info("Order quantity updated.") }
     }

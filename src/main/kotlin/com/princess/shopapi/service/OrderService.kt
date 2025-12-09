@@ -2,18 +2,18 @@ package com.princess.shopapi.service
 
 import com.princess.shopapi.dto.OrderDTO
 import com.princess.shopapi.dto.OrderStatus
+import com.princess.shopapi.dto.Role
 import com.princess.shopapi.helpers.ResourceNotFoundException
-import com.princess.shopapi.helpers.createOrderEntity
+import com.princess.shopapi.helpers.UnauthorizedUserException
 import com.princess.shopapi.helpers.createOrderItemEntity
 import com.princess.shopapi.helpers.toOrderResponse
+import com.princess.shopapi.model.OrderEntity
 import com.princess.shopapi.model.OrderItemEntity
 import com.princess.shopapi.repository.OrderRepository
 import com.princess.shopapi.repository.ProductRepository
 import com.princess.shopapi.repository.UserRepository
 import org.slf4j.LoggerFactory
-import org.springframework.data.domain.Page
-import org.springframework.data.domain.PageImpl
-import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.*
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
 import java.util.*
@@ -26,33 +26,64 @@ class OrderService(
 ) {
     private val log = LoggerFactory.getLogger(this::class.java)
 
-    fun create(userId: UUID, details: OrderDTO): OrderDTO {
-        log.debug("Fetching user..")
-        val user = userRepository.findById(userId).orElseThrow {
+    fun create(userId: UUID, details: OrderDTO): List<OrderDTO> {
+        log.debug("Fetching buyer..")
+        val buyer = userRepository.findById(userId).orElseThrow {
             log.error("User does not exist.")
             ResourceNotFoundException("User does not exist.")
         }
 
-        log.debug("Creating order..")
-        val order = details.createOrderEntity(user)
+        log.debug("Grouping order items by seller..")
+        val groupedOrderItems = details.products.groupBy { it.product.seller }
 
-        log.debug("Creating each OrderItem..")
-        details.products.forEach { orderItem ->
-            val product = orderItem.product.id?.let { productRepository.findById(it).orElseThrow() }
-                ?: throw ResourceNotFoundException("One or more of the given products does not exist.")
-            val item = orderItem.createOrderItemEntity(product, order)
-            order.items.add(item)
+        log.debug("Creating orders..")
+        val orders = groupedOrderItems.map { (seller, orderItems) ->
+            val sellerEntity = seller?.let { userRepository.findById(seller).orElseThrow() }
+                ?: throw IllegalArgumentException("One or more order items have no seller ID passed.")
+
+            val order = OrderEntity(
+                buyer = buyer,
+                seller = sellerEntity,
+                status = details.status,
+                totalAmount = orderItems.sumOf { it.priceAtPurchase * it.quantity },
+            )
+
+            order.items = orderItems.map { item ->
+                val product = productRepository.findById(
+                    item.product.id ?: throw IllegalArgumentException("Product ID is required.")
+                ).orElseThrow()
+
+                log.debug("Checking if product is not deleted..")
+                if(product.isDeleted) {
+                    log.error("Product is deleted, cannot place this order.")
+                    throw IllegalArgumentException("Deleted products cannot be purchase.")
+                }
+
+                log.debug("Updating product quantity..")
+                productRepository.save(product.apply { quantity -= item.quantity })
+
+                item.createOrderItemEntity(product, order)
+            }.toMutableList()
+
+            order
         }
 
-        log.debug("Saving order..")
-        return order.apply {
-            totalAmount = order.items.sumOf { it.priceAtPurchase * it.quantity }
-        }.let { repository.save(it) }.toOrderResponse()
+        log.debug("Saving orders..")
+        return orders.map { repository.save(it).toOrderResponse() }
     }
 
-    fun findAll(userId: UUID, pageable: Pageable): Page<OrderDTO> {
-        log.debug("Finding all orders of user..")
-        val page = repository.findAllByUserId(userId, pageable)
+    fun findAll(userId: UUID, role: Role, pageable: Pageable): Page<OrderDTO> {
+        val customPageable = if (pageable.sort.isUnsorted) PageRequest.of(
+            pageable.pageNumber,
+            pageable.pageSize,
+            Sort.by(Sort.Direction.DESC, "createdAt")
+        ) else pageable
+
+        log.debug("Finding all orders..")
+        val page = when (role) {
+            Role.BUYER -> repository.findAllByBuyerId(userId, customPageable)
+            Role.SELLER -> repository.findAllBySellerId(userId, customPageable)
+        }
 
         val list = page.content.map { it.toOrderResponse() }
         return PageImpl(
@@ -70,21 +101,31 @@ class OrderService(
         }.toOrderResponse()
 
         log.debug("Checking if user is owner..")
-        if(order.userId != userId) {
+        if (order.buyerId != userId && order.sellerId != userId) {
             log.error("User is not authorized to query this order.")
-            throw IllegalArgumentException("User is not authorized to query this order.")
+            throw UnauthorizedUserException("User is not authorized to query this order.")
         }
 
         return order
     }
 
-    fun updateStatus(orderId: UUID, status: OrderStatus): OrderDTO {
+    fun updateStatus(orderId: UUID, status: OrderStatus, userId: UUID): OrderDTO {
         if (status == OrderStatus.CANCELED) return cancelOrder(orderId)
 
         log.debug("Finding order..")
         val order = repository.findById(orderId).orElseThrow {
             log.error("Order does not exist.")
             ResourceNotFoundException("Order does not exist.")
+        }
+
+        log.debug("Checking user authorization..")
+        if (order.seller?.id != userId)
+            throw UnauthorizedUserException("User is not authorized to update this order.")
+
+        log.debug("Disallow status update if delivered or canceled")
+        if (order.status == OrderStatus.DELIVERED || order.status == OrderStatus.CANCELED) {
+            log.error("Cannot change status if it is currently delivered/canceled.")
+            throw IllegalArgumentException("Changing status if it is currently delivered/canceled is not allowed.")
         }
 
         return order.apply {
@@ -102,6 +143,12 @@ class OrderService(
         log.debug("Updating status..")
         val sevenDaysAgo = LocalDateTime.now().minusDays(7)
         return if (order.createdAt?.isAfter(sevenDaysAgo) ?: false) {
+            log.debug("Disallow cancel order if delivered or canceled")
+            if (order.status == OrderStatus.DELIVERED || order.status == OrderStatus.CANCELED) {
+                log.error("Cannot cancel order if it is currently delivered/canceled.")
+                throw IllegalArgumentException("Changing status if it is currently delivered/canceled is not allowed.")
+            }
+
             log.debug("Returning all items to product..")
             order.items.forEach { item: OrderItemEntity ->
                 item.product?.apply {

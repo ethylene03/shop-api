@@ -15,7 +15,8 @@ class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidationError(ex: MethodArgumentNotValidException): ErrorResponseDTO =
-        ErrorResponseDTO( error = ex.bindingResult.fieldErrors
+        ErrorResponseDTO(
+            error = ex.bindingResult.fieldErrors
             .map { error -> "In ${error.field}, ${error.defaultMessage}" }
             .toList()
         )
@@ -37,7 +38,7 @@ class GlobalExceptionHandler {
         ErrorResponseDTO(error = listOf(ex.message ?: "Resource not found."))
 
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    @ExceptionHandler(InvalidLoginException::class)
+    @ExceptionHandler(InvalidLoginException::class, UnauthorizedUserException::class)
     fun unauthorizedException(ex: Exception): ErrorResponseDTO =
         ErrorResponseDTO(error = listOf(ex.message ?: "Unauthorized access."))
 }
@@ -46,3 +47,4 @@ class ResourceNotFoundException(message: String) : RuntimeException(message)
 class DuplicateKeyException(message: String) : RuntimeException(message)
 class InvalidCredentialsException(message: String) : RuntimeException(message)
 class InvalidLoginException(message: String) : RuntimeException(message)
+class UnauthorizedUserException(message: String) : RuntimeException(message)
